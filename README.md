@@ -1,4 +1,6 @@
 # Botello-2026-ribosome-aging
+A collection of scripts for "Ribosome Molecular Aging Shapes Translation Dynamics".
+Additional information available upon request.
 
 
 ## Contents
@@ -38,3 +40,8 @@ contained in the `occupancy_dyanics.ipynb` notebook.  pysam is required
 to read the genome sequence and alignment files.  Biopython Seq objects are
 used for performing codon translation and scipy and sklearn are used for fitting
 the occupancy profiles to logistic functions.
+
+### Determination of age-dependent RNA modifications
+pseudoU-BIDseq or 2'-O-methylation scores were further analyzed in R to assess
+which sites were significantly changed upon ribosome aging, as presented in
+`Modification_Analysis.Rmd`

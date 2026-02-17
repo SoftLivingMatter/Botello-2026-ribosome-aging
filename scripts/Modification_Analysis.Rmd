@@ -1,0 +1,198 @@
+---
+title: "Modification_Analysis"
+author: "Maya Butani"
+date: "2025-12-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read in basic files
+```{r}
+library(tidyverse)
+
+# Load the data
+l10a_mono <- read_csv("PseudoU-L10A_monosome.csv")
+l10a_di <- read_csv("PseudoU-L10A_disome.csv")
+
+s17_mono <- read_csv("PseudoU-S17_monosome.csv")
+s17_di <- read_csv("PseudoU-S17_disome.csv")
+
+#very simple prep, just remove unecessary columns
+prepANOVATime <- function(df){
+  dfnum <- df[, c(1:7)]
+}
+
+pl10a_m <- prepANOVATime(l10a_mono)
+pl10a_d <- prepANOVATime(l10a_di)
+
+ps17_m <- prepANOVATime(s17_mono)
+ps17_d <- prepANOVATime(s17_di)
+
+#combine these so you can have comparisons across lsu and ssu pulldowns
+monodf <- merge(pl10a_m, ps17_m, by = "Site", all.x = TRUE)
+didf <- merge(pl10a_d, ps17_d, by = "Site", all.x = TRUE)
+
+monodf
+didf
+
+```
+
+
+# Running ANOVA across time for each fraction (mono, di)
+```{r}
+run_time_anova <- function(dfc, alpha = 0.05) {
+  #get column names
+  sample_cols <- colnames(dfc)[colnames(dfc) != "Site"]
+  groups <- str_extract(sample_cols, "^[A-Za-z0-9]+-T[0-9]+") #extract groups including L10A and S17
+  group_labels <- factor(groups) #factor treats the numbers (timepoints) as categorical
+
+  # 2. Define ANOVA helper
+  get_anova_stats <- function(y, g) {
+    model <- lm(y ~ g)
+    aov_table <- anova(model)
+    F_stat <- aov_table$`F value`[1]
+    p_val  <- aov_table$`Pr(>F)`[1]
+    return(c(F_statistic = F_stat, p_value = p_val))
+  }
+  
+  # 3. Run ANOVA row-wise
+  sample_matrix <- dfc[, sample_cols] #can only apply on numeric cols
+  
+  anova_results <- t(apply(sample_matrix, 1, function(row) {
+    get_anova_stats(as.numeric(row), group_labels)
+  }))
+  
+  # 4. Build results table with q-values
+  output <- data.frame(
+    PseudoUSite = dfc$Site,
+    F_statistic = anova_results[, "F_statistic"],
+    p_value     = anova_results[, "p_value"]
+  )
+  
+  qvals <- p.adjust(output$p_value, method = "BH")
+  output$q_value <- qvals
+  outputf <- output[order(output$q_value), ] #sort by smallest to largest q value
+  
+  dfnew <- dfc
+  dfnew$q_value <- qvals
+  dfnew <- dfnew %>% arrange(q_value)
+  
+  return(dfnew)
+}
+
+#monosome results
+output_mono <- run_time_anova(monodf)
+#disome results
+output_di <- run_time_anova(didf)
+
+output_mono
+output_di
+
+```
+
+# Doing post hoc for the monodf and didf
+```{r}
+#This is just for the mono/di dataframes bc the group labels and the numeric columns
+run_tukey <- function(df2, alpha = 0.05) {
+  #This beginning part is to get group_labels and is right now very messy
+  sample_cols <- colnames(df2)[colnames(df2) != "Site" & colnames(df2) != "q_value"]
+  groups <- str_extract(sample_cols, "^[A-Za-z0-9]+-T[0-9]+") #extract groups including L10A and S17
+  group_labels <- factor(groups) #factor treats the numbers (timepoints) as categorical
+  
+  tukey_list <- list()
+  #loop through significant positions based on alpha
+  sig_idx <- which(df2$q_value < alpha)
+
+  for (i in sig_idx) {
+    #gets just the numeric sample columns
+    y <- as.numeric(df2[i, 2:13]) #remember to change this to just be the numeric non q-value columns
+    model <- aov(y ~ group_labels) #fit model, note that this is redundant and not pretty but fix later
+    tuk <- TukeyHSD(model) #run Tukey post_hoc
+    tukey_list[[as.character(df2$Site[i])]] <- tuk #store with position label
+  }
+  return(tukey_list)
+}
+
+#run with a alpha of 1 so that you capture all Tukey's comparisons
+posthoc_mono <- run_tukey(output_mono, 1)
+posthoc_di <- run_tukey(output_di, 1)
+
+posthoc_mono
+posthoc_di
+```
+
+# Getting just the desired comparisons
+```{r}
+
+target_contrasts_monodi <- c(
+  "L10A-T72-L10A-T0", 
+  "S17-T72-S17-T0"
+)
+
+extract_tukey_pvals <- function(tukey_list, output, target_contrasts) {
+  ftuk <- purrr::map_dfr(
+    names(tukey_list),
+    function(site) {
+
+      tuk <- tukey_list[[site]][[1]]
+
+      tuk_df <- as.data.frame(tuk)
+      tuk_df$contrast <- rownames(tuk_df)
+      tuk_df$site <- site
+
+      tuk_df |>
+        dplyr::filter(contrast %in% target_contrasts) |>
+        dplyr::select(site, contrast, `p adj`)
+    }
+  )
+  
+  tukwide <- ftuk %>% pivot_wider(
+    id_cols = site, 
+    names_from = contrast,
+    values_from = `p adj`
+  )
+  
+  colname1 <- target_contrasts[1]
+  colname2 <- target_contrasts[2]
+    
+  output$L10A_Time_Padj = tukwide[[colname1]]
+  #output$L10A_Time_Padj = tukwide$`L10A_T72-L10A_T0`
+  output$S17_Time_Padj = tukwide[[colname2]]
+  #output$S17_Time_Padj = tukwide$`S17_T72-S17_T0`
+
+  return(output)
+}
+
+
+p_output_mono <- extract_tukey_pvals(posthoc_mono, output_mono, target_contrasts_monodi)
+p_output_di <- extract_tukey_pvals(posthoc_di, output_di, target_contrasts_monodi)
+
+p_output_mono
+p_output_di
+
+```
+
+# Writing all the output to folder - p adjusted output
+
+These p-values are studentized p-values controlled for family-wise error rate from the Tukey's post hoc test.
+Then the comparisons are from time 0 to 72 hours.
+
+```{r}
+#writing the output
+
+write.csv(
+  p_output_mono,
+  file = "L10A_S17_Human_Pseudouridylations/Time_ANOVA/TukeyPAdj_Output/Mono_Output_TukeyPvals.csv",
+  row.names = FALSE
+) 
+
+write.csv(
+  p_output_di,
+  file = "L10A_S17_Human_Pseudouridylations/Time_ANOVA/TukeyPAdj_Output/Di_Output_TukeyPvals.csv",
+  row.names = FALSE
+) 
+```
+
