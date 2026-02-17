@@ -15,3 +15,11 @@ radial distribution is normalized by the area of each section to generate an
 enrichment measurement representing the increase or decrease in intensity relative
 to a uniform distribution.  While the code can accommodate any number of bins,
 3 bins were used to define the core and rim region of each nucleolus.
+
+### Quantification of cytoplasmic ribosome signal
+Images were analyzed with the `cytoplasm_measruement.cppipe` using CellProfiler
+(v4.2.6). Nuclei were identified from a blurred, Hoescht stain and cell boundaries
+estimated by propagating the nuclei with the cytoplasmic stain.  The final
+cytoplasmic region was determined by removing the nucleus from the cell boundary
+and used to measure the intensity of stained ribosomes.  Resulting csv files were
+analyzed in Prism.
