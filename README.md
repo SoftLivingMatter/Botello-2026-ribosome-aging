@@ -23,3 +23,5 @@ estimated by propagating the nuclei with the cytoplasmic stain.  The final
 cytoplasmic region was determined by removing the nucleus from the cell boundary
 and used to measure the intensity of stained ribosomes.  Resulting csv files were
 analyzed in Prism.
+
+### Ribosome pausing and occupancy analysis
