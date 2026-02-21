@@ -34,7 +34,7 @@ using `ribopy dump coverage`.  The coverage, location and gene is read from the
 dumped files and used to calculate pause scores or detect age-dependent pause
 sites.
 
-### Occupancy dynamics and dropoff codons
+### Occupancy dynamics and identification of dropoff codons
 Display of relative ribosome occupancy and detection of the dropoff codon is
 contained in the `occupancy_dyanics.ipynb` notebook.  pysam is required
 to read the genome sequence and alignment files.  Biopython Seq objects are
