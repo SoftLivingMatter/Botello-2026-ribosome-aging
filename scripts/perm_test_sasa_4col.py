@@ -33,6 +33,7 @@ try:
     from scipy.stats import mannwhitneyu
 except ImportError:  # scipy is optional; only used for the cross-check columns
     mannwhitneyu = None
+    print("WARNING: scipy not found; MannWhitney_p and AUC will be NaN.")
 
 
 def load_columns(path, cols):
@@ -156,6 +157,7 @@ def main():
     fig.tight_layout()
     fig.savefig(f"{args.out}.png", dpi=300)
     fig.savefig(f"{args.out}.pdf")
+    plt.close(fig)
     print(f"\nSaved {args.out}.csv, {args.out}.png, {args.out}.pdf")
 
 
