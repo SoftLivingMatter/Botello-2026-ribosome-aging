@@ -47,7 +47,7 @@ which sites were significantly changed upon ribosome aging, as presented in
 `Modification_Analysis.Rmd`
 
 ### Permutation test of solvent accessibility at modified sites
-Whether modified rRNA sites are more solvent-exposed than other sites of the same
+Whether aging-related 8-oxo-guanine modified rRNA sites are more solvent-exposed than other sites of the same
 base was tested with `perm_test_sasa_4col.py`.  The input is a csv file with four
 columns of SASA values: 28S modified sites, 28S all other sites of that base, 18S
 modified sites and 18S all other sites of that base.  Because each background
