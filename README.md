@@ -133,3 +133,50 @@ and are pseudoknot-free.  The sha256 hashes of the files used were:
 | `18S.dbn` | `1bb7975e0f2772e39e9adb4f14ea1db11c91699efd5c429378ea615d06697e6b` |
 | `28S.fasta` | `eed08754436750c1a8d616d8ad15610f399e1aace9963db39145f8d35f420815` |
 | `28S.dbn` | `f4165a4d9bac1f3398074601a322775eafe47df98861aff06e3f94e1b34fc1c5` |
+
+### 8-oxo-G mapping and G-to-T transversion analysis
+8-oxo-G is read out as G-to-T transversions during reverse transcription.
+Reads were mapped to ribosomal RNA references with STAR (v2.7.11a), with the minimum
+aligned fraction relaxed to 4% so reads carrying oxidation-induced mismatches are
+retained, filtered to mapping quality >= 20, then sorted and indexed with samtools
+(v1.9).  Per-position base counts were generated with `samtools mpileup` (base-alignment
+quality recalculation disabled, depth cap 10^6) and parsed with a custom Python script
+that only considers positions where the reference base is G.  The G-to-T frequency
+is the number of reads reporting T divided by the number reporting a match, T, A or C;
+reads with a deletion and positions without informative reads are excluded, and
+samples without coverage at a retained position are assigned a depth and frequency
+of zero.  The mapping and pileup parsing are part of the
+[5eU-seq-pipelines](https://github.com/SoftLivingMatter/5eU-seq-pipelines)
+repository (see that repository for the exact commands).  Mapping follows the approach
+previously reported in PMID: 40604277.
+
+The resulting `summary.tsv` has one row per site and sample, with the columns `chr`,
+`pos`, `ref`, `depth`, `T_count`, `G_to_T_freq` and `sample`, and is analyzed in R with
+the functions in `scripts/oxidation_analysis/oxidation_functions.R` (requires the
+tidyverse and broom).  `oxidation_analysis_template.R` shows how to run an analysis:
+set the input file(s), define the groups, and call `run_analysis()` and `make_plots()`.
+Groups are defined as an ordered, named vector of substrings matched against the
+`sample` column, and the order sets the group index (e.g. T0, T24, T72).  An optional
+table of regions (name, start, end) annotates each site, such as 18S, 5.8S and 28S in a
+single rDNA reference.
+
+A guanine position is retained only if every sample in the comparison has a depth of
+at least 50 and the T counts summed across samples is at least 5.  Each site is then
+tested independently:
+- Differences in G-to-T frequency between groups are assessed by one-way ANOVA on the
+  per-sample frequencies, with p-values adjusted across all tested sites by
+  Benjamini-Hochberg.  For three or more groups, Tukey's HSD gives an adjusted p-value
+  for the first against the last group (e.g. T0 vs T72).
+- To test for molecular age-dependent changes, the T and non-T read counts at each site
+  are modeled as binomial outcomes in a generalized linear model with a logit link and
+  the group index as the predictor.  This uses the read counts directly, so differences
+  in depth between samples are accounted for.  The p-value of the group index coefficient
+  is adjusted by Benjamini-Hochberg (`glm_q` in the output is adjusted across all sites).  A site is called significant only if
+  the slope has the same direction as the monotonic change in the mean G-to-T frequency
+  across groups, which is only applied when there are three or more groups.
+
+Results are written as `<output_prefix>_sites.csv` (per-site group means, ANOVA F and
+q-value, Tukey p-value, GLM p-value and q-value, monotone direction and the
+per-sample frequencies) along with `<output_prefix>_plots.pdf` and
+`<output_prefix>_timecourse.pdf` showing the counts, genomic position, volcano and
+time-course plots of significant sites.
