@@ -86,3 +86,50 @@ replicate.  Results are written to `results.csv`.  Dependencies (pandas, scipy,
 statsmodels, plotly, openpyxl and marimo) are declared inline, so
 `uv run anova_trend.py` will set up the environment, or use
 `marimo edit anova_trend.py` to explore interactively.
+
+### Delta-delta G analysis of rRNA secondary structure stability
+To estimate the impact of 8-oxo-guanine lesions on the secondary-structure
+stability of human 28S and 18S rRNAs, G-to-U substitutions were introduced in
+silico to approximate the altered base-pairing properties of 8-oxo-G.  This was
+done with `scripts/rna_mutation_screen/g2u_sweep.py`.  For each guanosine, the
+change in folding free energy (ddG) relative to a fixed reference structure is
+calculated with the ViennaRNA Python bindings (v2.7.2, nearest-neighbor Turner
+energy model; equivalent to `RNAeval`).  The wild-type free energy
+dG(WT, S) is calculated once, every guanosine is then individually replaced with
+uracil, and the mutant is re-evaluated against the same structure S:
+ddG = dG(mutant, S) - dG(WT, S).  Positive values indicate destabilization of the
+reference fold and unpaired positions are expected to be ~0.  The structure is
+held fixed rather than re-folded because, in the assembled ribosome, rRNA folding
+is constrained by protein contacts and tertiary interactions that a thermodynamic
+re-fold would not capture.  Only canonical, nested secondary-structure energetics
+are evaluated; tertiary contacts, protein-binding contributions and pseudoknots
+are not accounted for.
+
+```bash
+cd scripts/rna_mutation_screen
+python g2u_sweep.py --name 18S --fasta data/18S.fasta --structure data/18S.dbn --out output/18S_G-to-U_ddG.csv
+python g2u_sweep.py --name 28S --fasta data/28S.fasta --structure data/28S.dbn --out output/28S_G-to-U_ddG.csv
+```
+
+The output csv has one row per mutation (position, whether it is paired, its
+partner position and base, and ddG), with the input file hashes and ViennaRNA
+version in the header.  The only dependency is ViennaRNA >= 2.6
+(`pip install -r requirements.txt`).  The script stops with an error if a sequence
+is not a single A/C/G/U record, if the structure contains anything but `.()` or
+is unbalanced, or if the sequence and structure lengths differ.
+
+The sequences and structures are not included and must be downloaded to a
+`data/` folder in `scripts/rna_mutation_screen` as `18S.fasta`, `18S.dbn`,
+`28S.fasta` and `28S.dbn`.  They were exported from RNAcentral for human 18S
+([URS00025D0EC0/9606](https://rnacentral.org/rna/URS00025D0EC0/9606)) and 28S
+([URS000075EC78/9606](https://rnacentral.org/rna/URS000075EC78/9606)) rRNA, using
+"Copy as RNA" for the sequence and the dot-bracket copy button for the structure.
+The structures are R2DT predictions built on the RiboVision SSU and LSU templates
+and are pseudoknot-free.  The sha256 hashes of the files used were:
+
+| File | sha256 |
+|---|---|
+| `18S.fasta` | `7c722d546899bb5764e7bfe26ebbda3249e453f33996f02e1bbaaa01bdf13ae2` |
+| `18S.dbn` | `1bb7975e0f2772e39e9adb4f14ea1db11c91699efd5c429378ea615d06697e6b` |
+| `28S.fasta` | `eed08754436750c1a8d616d8ad15610f399e1aace9963db39145f8d35f420815` |
+| `28S.dbn` | `f4165a4d9bac1f3398074601a322775eafe47df98861aff06e3f94e1b34fc1c5` |
