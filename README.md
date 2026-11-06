@@ -1,10 +1,12 @@
 # Botello-2026-ribosome-aging
-A collection of scripts for "Ribosome Molecular Aging Shapes Translation Dynamics".
+A collection of scripts, notebooks and image-analysis pipelines for "Ribosome Molecular Aging Shapes Translation Dynamics".
 Additional information available upon request.
 
 
 ## Contents
-Each script and pipeline in the `scripts` folder is explained below.
+Each script, notebook and pipeline in the `scripts` folder is explained below.
+Software versions are given where they were recorded; Python packages are
+otherwise listed per section and were not version-pinned.
 
 ### Quantification of nucleolar core/rim enrichment of ribosome signal
 Images were analyzed with the `nucleolar_core_rim.cppipe` using CellProfiler
@@ -32,7 +34,9 @@ occupancy measurements were performed in the jupyter notebook `pause_occupancy.i
 using ribopy databases as inputs.  Each sample is extracted from the ribo files
 using `ribopy dump coverage`.  The coverage, location and gene is read from the
 dumped files and used to calculate pause scores or detect age-dependent pause
-sites.
+sites.  The notebook requires ribopy (for `ribopy dump`, run in its own
+environment) and biopython, matplotlib, numpy, pandas, scipy, seaborn and
+statsmodels.
 
 ### Occupancy dynamics and identification of dropoff codons
 Display of relative ribosome occupancy and detection of the dropoff codon is
@@ -44,16 +48,19 @@ the occupancy profiles to logistic functions.
 ### Determination of age-dependent RNA modifications
 pseudoU-BIDseq or 2'-O-methylation scores were further analyzed in R to assess
 which sites were significantly changed upon ribosome aging, as presented in
-`Modification_Analysis.Rmd`
+`Modification_Analysis.Rmd`.  For each site, an ANOVA across the time points
+is run, p-values are corrected by Benjamini-Hochberg, and Tukey post-hoc tests
+are used for pairwise comparisons.  The notebook requires R and the tidyverse.
 
 ### Permutation test of solvent accessibility at modified sites
-Whether aging-related 8-oxo-guanine modified rRNA sites are more solvent-exposed than other sites of the same
-base was tested with `perm_test_sasa_4col.py`.  The input is a csv file with four
-columns of SASA values: 28S modified sites, 28S all other sites of that base, 18S
-modified sites and 18S all other sites of that base.  Because each background
-contains only the modifiable base, random draws are automatically base-matched.
-For each rRNA, the mean or median SASA of the modified sites is compared to a null
-distribution built from random draws (without replacement) of the same number of
-sites from the background.  Mann-Whitney U p-values and AUC are reported as a
-cross-check.  The script requires numpy, pandas and matplotlib, and optionally
-scipy.  Results are written as csv, png and pdf files.
+Whether aging-related 8-oxo-guanine modified rRNA sites are more solvent-exposed
+than other sites of the same base was tested with `perm_test_sasa_4col.py`.  The
+input is a csv file with four columns of SASA values: 28S modified sites, 28S all
+other sites of that base, 18S modified sites and 18S all other sites of that base.
+Because each background contains only the modifiable base, random draws are
+automatically base-matched.  For each rRNA, the mean or median SASA of the modified
+sites is compared to a null distribution built from random draws (without
+replacement) of the same number of sites from the background.  Mann-Whitney U
+p-values and AUC are reported as a cross-check.  The script requires numpy, pandas
+and matplotlib, and optionally scipy.  Results are written as csv, png and pdf
+files.
