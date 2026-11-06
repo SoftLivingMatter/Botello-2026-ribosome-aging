@@ -64,3 +64,25 @@ replacement) of the same number of sites from the background.  Mann-Whitney U
 p-values and AUC are reported as a cross-check.  The script requires numpy, pandas
 and matplotlib, and optionally scipy.  Results are written as csv, png and pdf
 files.
+
+### Statistical determination of molecular age-dependent protein interactions
+Proteomic abundances from the RPL10A and RPS17 pulldowns (three biological
+replicates each at T0, T24 and T72) were analyzed with the marimo notebook
+`anova_trend.py`.  For each protein, differences among the three time points
+are assessed by one-way ANOVA, requiring at least two non-missing values per
+time point; proteins with zero variance across all samples are excluded.
+P-values are adjusted for multiple testing within each pulldown using the
+Benjamini-Hochberg method (q < 0.05).  The direction of change is assigned
+from the group means: proteins are classified as increasing (+) if mean
+abundance rose at each successive time point (T0 < T24 < T72), decreasing (-)
+if it fell at each successive time point (T0 > T24 > T72), and otherwise as
+having no monotonic trend (0).  The notebook also plots volcano plots and
+abundance profiles of the top-ranked increasing and decreasing proteins.
+
+The inputs are two excel files, `L10Aproteomics_08182026.xlsx` and
+`S17proteomics_08182026.xlsx`, expected in the same directory as the notebook,
+with the gene name (`Gene Name`) in the first column and columns `T0-1`...`T72-3` for each
+replicate.  Results are written to `results.csv`.  Dependencies (pandas, scipy,
+statsmodels, plotly, openpyxl and marimo) are declared inline, so
+`uv run anova_trend.py` will set up the environment, or use
+`marimo edit anova_trend.py` to explore interactively.
